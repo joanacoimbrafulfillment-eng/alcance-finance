@@ -3,132 +3,157 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WH Pro - Cloud Financial System</title>
+    <title>WH Pro - Secured Financial System</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --primary: #2c3e50; --cgd: #0056b3; --capital: #8e44ad; --success: #27ae60; --danger: #e74c3c; --bg: #f8f9fa; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); margin: 0; color: #333; overflow-x: hidden; }
-        .nav-tabs { background: var(--primary); display: flex; padding: 0 20px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        
+        /* LOGIN SCREEN */
+        #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--primary); display: flex; justify-content: center; align-items: center; z-index: 10000; }
+        .login-box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 320px; text-align: center; }
+        .login-box h2 { margin-bottom: 20px; color: var(--primary); }
+        .login-box input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        .btn-login { width: 100%; background: var(--success); color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        
+        /* APP CONTENT */
+        #app-content { display: none; } /* Hidden until login */
+
+        .nav-tabs { background: var(--primary); display: flex; padding: 0 20px; position: sticky; top: 0; z-index: 100; align-items: center; }
         .tab-btn { background: none; border: none; color: #bdc3c7; padding: 15px 25px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: 0.3s; border-bottom: 3px solid transparent; font-size: 13px; }
         .tab-btn.active { color: white; border-bottom: 3px solid var(--success); }
+        .btn-logout { margin-left: auto; background: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+
         .container { max-width: 1600px; margin: 20px auto; padding: 0 20px; }
-        .tab-content { display: none; animation: fadeIn 0.3s ease-in; }
+        .tab-content { display: none; }
         .tab-content.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; } }
         .top-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
-        .card { background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 5px solid var(--primary); }
-        .card h3 { margin: 0; font-size: 0.7em; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px; }
-        .card .val { font-size: 1.1em; font-weight: bold; margin-top: 5px; display: block; white-space: nowrap; }
+        .card { background: white; padding: 15px; border-radius: 10px; border-left: 5px solid var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .card h3 { margin: 0; font-size: 0.7em; color: #7f8c8d; text-transform: uppercase; }
+        .card .val { font-size: 1.1em; font-weight: bold; margin-top: 5px; display: block; }
         .box { background: white; padding: 18px; border-radius: 10px; box-shadow: 0 3px 10px rgba(0,0,0,0.04); margin-bottom: 20px; border: 1px solid #eee; }
         .box h4 { margin: 0 0 15px 0; font-size: 0.85em; border-bottom: 1px solid #f1f1f1; padding-bottom: 8px; color: var(--primary); text-transform: uppercase; }
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap: 10px; align-items: flex-end; }
         label { display: block; font-size: 10px; font-weight: bold; margin-bottom: 4px; color: #777; text-transform: uppercase; }
-        input, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; font-size: 12px; outline: none; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; font-size: 12px; }
         .btn { padding: 9px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; color: white; font-size: 11px; }
         .btn-add { background: var(--success); }
         .btn-del { background: #ff7675; padding: 2px 6px; border-radius: 4px; color:white; cursor:pointer; font-size: 9px; }
         .table-container { overflow-x: auto; background: white; border-radius: 8px; }
         table { width: 100%; border-collapse: collapse; min-width: 1000px; }
-        th { background: #fdfdfd; padding: 10px; text-align: left; font-size: 10px; color: #999; text-transform: uppercase; border-bottom: 2px solid #eee; }
+        th { background: #fdfdfd; padding: 10px; text-align: left; font-size: 10px; color: #999; text-transform: uppercase; }
         td { padding: 10px; border-bottom: 1px solid #f7f7f7; font-size: 12px; }
         .income-text { color: var(--success); font-weight: bold; }
         .expense-text { color: var(--danger); font-weight: bold; }
-        .manage-list { max-height: 180px; overflow-y: auto; border: 1px solid #f1f1f1; padding: 5px; border-radius: 5px; background: #fafafa; margin-top: 10px; }
+        .manage-list { max-height: 180px; overflow-y: auto; border: 1px solid #f1f1f1; padding: 5px; border-radius: 5px; background: #fafafa; }
         .manage-item { display:flex; justify-content:space-between; padding:4px 8px; border-bottom:1px solid #eee; align-items: center; font-size: 10px; }
         .dash-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; }
         .full-width { grid-column: span 2; }
         .chart-container { position: relative; height: 300px; width: 100%; }
-        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 9999; display: flex; justify-content: center; align-items: center; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div id="loading-overlay">CONNECTING TO ALCANCE DATABASE...</div>
+    <!-- TELA DE LOGIN -->
+    <div id="login-screen">
+        <div class="login-box">
+            <h2>WH Pro Login</h2>
+            <input type="email" id="login-email" placeholder="E-mail">
+            <input type="password" id="login-pass" placeholder="Password">
+            <button class="btn-login" id="btn-do-login">Entrar</button>
+            <p id="login-error" style="color:red; font-size:12px; margin-top:10px; display:none;"></p>
+        </div>
+    </div>
 
-    <nav class="nav-tabs">
-        <button class="tab-btn active" data-tab="tab-entry">Entry & Balances</button>
-        <button class="tab-btn" data-tab="tab-history">History</button>
-        <button class="tab-btn" data-tab="tab-dashboard">Dashboard</button>
-    </nav>
+    <!-- CONTEÚDO DO APP (ESCONDIDO ATÉ O LOGIN) -->
+    <div id="app-content">
+        <nav class="nav-tabs">
+            <button class="tab-btn active" data-tab="tab-entry">Entry & Balances</button>
+            <button class="tab-btn" data-tab="tab-history">History</button>
+            <button class="tab-btn" data-tab="tab-dashboard">Dashboard</button>
+            <button class="btn-logout" id="btn-logout">Sair / Logout</button>
+        </nav>
 
-    <div class="container">
-        <div class="top-summary" id="bank-cards-container"></div>
+        <div class="container">
+            <div class="top-summary" id="bank-cards-container"></div>
 
-        <div id="tab-entry" class="tab-content active">
-            <div style="display: grid; grid-template-columns: 2.8fr 1fr; gap: 20px;">
-                <div>
-                    <div class="box">
-                        <h4>New Transaction</h4>
-                        <div class="form-grid">
-                            <div><label>Date</label><input type="date" id="ipt-date"></div>
-                            <div><label>Entity</label><select id="sel-entity"></select></div>
-                            <div><label>Method</label><select id="sel-method"><option value="BANK">BANK</option><option value="CASH">CASH</option></select></div>
-                            <div><label>Bank Account</label><select id="sel-bank"></select></div>
-                            <div><label>Place</label><select id="sel-place-entry"></select></div>
-                            <div><label>Type</label><select id="sel-type">
-                                <option value="EXPENSES">EXPENSES</option>
-                                <option value="INCOME">INCOME</option>
-                                <option value="TRANSFER +">TRANSFER +</option>
-                                <option value="TRANSFER -">TRANSFER -</option>
-                            </select></div>
-                            <div><label>Net Value</label><input type="number" id="ipt-net" step="0.01" value="0"></div>
-                            <div><label>VAT</label><input type="number" id="ipt-vat" step="0.01" value="0"></div>
-                            <div><label>Total</label><input type="number" id="ipt-total" step="0.01" readonly style="background:#f9f9f9"></div>
-                            <button class="btn btn-add" id="btn-register">Register Entry</button>
+            <div id="tab-entry" class="tab-content active">
+                <div style="display: grid; grid-template-columns: 2.8fr 1fr; gap: 20px;">
+                    <div>
+                        <div class="box">
+                            <h4>New Transaction</h4>
+                            <div class="form-grid">
+                                <div><label>Date</label><input type="date" id="ipt-date"></div>
+                                <div><label>Entity</label><select id="sel-entity"></select></div>
+                                <div><label>Method</label><select id="sel-method"><option value="BANK">BANK</option><option value="CASH">CASH</option></select></div>
+                                <div><label>Bank Account</label><select id="sel-bank"></select></div>
+                                <div><label>Place</label><select id="sel-place-entry"></select></div>
+                                <div><label>Type</label><select id="sel-type">
+                                    <option value="EXPENSES">EXPENSES</option>
+                                    <option value="INCOME">INCOME</option>
+                                    <option value="TRANSFER +">TRANSFER +</option>
+                                    <option value="TRANSFER -">TRANSFER -</option>
+                                </select></div>
+                                <div><label>Net Value</label><input type="number" id="ipt-net" step="0.01" value="0"></div>
+                                <div><label>VAT</label><input type="number" id="ipt-vat" step="0.01" value="0"></div>
+                                <div><label>Total</label><input type="number" id="ipt-total" step="0.01" readonly style="background:#f9f9f9"></div>
+                                <button class="btn btn-add" id="btn-register">Register Entry</button>
+                            </div>
+                        </div>
+                        <div class="box">
+                            <h4>Recent Activity</h4>
+                            <div class="table-container"><table><thead><tr><th>Date</th><th>Entity</th><th>Bank</th><th>Place</th><th>Type</th><th align="right">Total</th><th>Action</th></tr></thead><tbody id="table-recent"></tbody></table></div>
                         </div>
                     </div>
-                    <div class="box">
-                        <h4>Recent Activity</h4>
-                        <div class="table-container"><table><thead><tr><th>Date</th><th>Entity</th><th>Bank</th><th>Place</th><th>Type</th><th align="right">Total</th></tr></thead><tbody id="table-recent"></tbody></table></div>
-                    </div>
-                </div>
-                <div>
-                    <div class="box" style="border-left-color: var(--capital);">
-                        <h4>Initial Balance</h4>
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <select id="sel-init-bank"></select>
-                            <input type="number" id="ipt-init-val" step="0.01" placeholder="0.00">
-                            <button class="btn" id="btn-save-init" style="background: var(--capital);">Set Balance</button>
+                    <div>
+                        <div class="box" style="border-left-color: var(--capital);">
+                            <h4>Initial Balance</h4>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <select id="sel-init-bank"></select>
+                                <input type="number" id="ipt-init-val" step="0.01" placeholder="0.00">
+                                <button class="btn" id="btn-save-init" style="background: var(--capital);">Set Balance</button>
+                            </div>
                         </div>
+                        <div class="box"><h4>Entities</h4><div style="display: flex; gap: 5px;"><input type="text" id="ipt-new-entity" placeholder="Name..."><button class="btn btn-add" id="btn-add-entity">+</button></div><div id="list-entities" class="manage-list"></div></div>
+                        <div class="box"><h4>Places</h4><div style="display: flex; gap: 5px;"><input type="text" id="ipt-new-place" placeholder="Name..."><button class="btn btn-add" id="btn-add-place">+</button></div><div id="list-places" class="manage-list"></div></div>
+                        <div class="box"><h4>Banks</h4><div style="display: flex; gap: 5px;"><input type="text" id="ipt-new-bank" placeholder="Name..."><button class="btn btn-add" id="btn-add-bank">+</button></div><div id="list-banks" class="manage-list"></div></div>
                     </div>
-                    <div class="box"><h4>Entities</h4><div style="display: flex; gap: 5px;"><input type="text" id="ipt-new-entity" placeholder="Name..."><button class="btn btn-add" id="btn-add-entity">+</button></div><div id="list-entities" class="manage-list"></div></div>
-                    <div class="box"><h4>Places</h4><div style="display: flex; gap: 5px;"><input type="text" id="ipt-new-place" placeholder="Name..."><button class="btn btn-add" id="btn-add-place">+</button></div><div id="list-places" class="manage-list"></div></div>
-                    <div class="box"><h4>Banks</h4><div style="display: flex; gap: 5px;"><input type="text" id="ipt-new-bank" placeholder="Name..."><button class="btn btn-add" id="btn-add-bank">+</button></div><div id="list-banks" class="manage-list"></div></div>
                 </div>
             </div>
-        </div>
 
-        <div id="tab-history" class="tab-content">
-            <div class="box">
-                <div class="form-grid">
-                    <div><label>Year</label><select id="hist-f-year"><option value="All">All Years</option></select></div>
-                    <div><label>Month</label><select id="hist-f-month"><option value="All">All Months</option></select></div>
-                    <div><label>Bank</label><select id="hist-f-bank"><option value="All">All Banks</option></select></div>
-                    <div><label>Place</label><select id="hist-f-place"><option value="All">All Places</option></select></div>
-                    <button class="btn" id="btn-export" style="background:var(--success)">Export CSV</button>
+            <div id="tab-history" class="tab-content">
+                <div class="box">
+                    <div class="form-grid">
+                        <div><label>Year</label><select id="hist-f-year"><option value="All">All Years</option></select></div>
+                        <div><label>Month</label><select id="hist-f-month"><option value="All">All Months</option></select></div>
+                        <div><label>Bank</label><select id="hist-f-bank"><option value="All">All Banks</option></select></div>
+                        <div><label>Place</label><select id="hist-f-place"><option value="All">All Places</option></select></div>
+                        <button class="btn" id="btn-export" style="background:var(--success)">Export CSV</button>
+                    </div>
                 </div>
+                <div class="table-container box"><table><thead><tr><th>Date</th><th>Entity</th><th>Method</th><th>Bank</th><th>Place</th><th>Type</th><th>Net</th><th>VAT</th><th>Total</th><th>Action</th></tr></thead><tbody id="table-history-body"></tbody></table></div>
             </div>
-            <div class="table-container box"><table><thead><tr><th>Date</th><th>Entity</th><th>Method</th><th>Bank</th><th>Place</th><th>Type</th><th>Net</th><th>VAT</th><th>Total</th><th>Action</th></tr></thead><tbody id="table-history-body"></tbody></table></div>
-        </div>
 
-        <div id="tab-dashboard" class="tab-content">
-            <div class="box"><div class="form-grid"><div><label>Year</label><select id="dash-f-year"><option value="All">All Years</option></select></div><div><label>Month</label><select id="dash-f-month"><option value="All">All Months</option></select></div><div><label>Place</label><select id="dash-f-place"><option value="All">All Places</option></select></div></div></div>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center; margin-bottom: 20px;">
-                <div class="box"><h3>INCOME</h3><b id="dash-num-inc" class="income-text">0.00 €</b></div>
-                <div class="box"><h3>EXPENSES</h3><b id="dash-num-exp" class="expense-text">0.00 €</b></div>
-                <div class="box"><h3>NET RESULT</h3><b id="dash-num-net">0.00 €</b></div>
-            </div>
-            <div class="dash-grid">
-                <div class="box full-width"><h4>Monthly Trends</h4><div class="chart-container"><canvas id="barChart"></canvas></div></div>
-                <div class="box"><h4>Top Entities Spending</h4><div class="chart-container"><canvas id="pieChart"></canvas></div></div>
-                <div class="box"><h4>Spending by Place</h4><div class="chart-container"><canvas id="placeChart"></canvas></div></div>
+            <div id="tab-dashboard" class="tab-content">
+                <div class="box"><div class="form-grid"><div><label>Year</label><select id="dash-f-year"><option value="All">All Years</option></select></div><div><label>Month</label><select id="dash-f-month"><option value="All">All Months</option></select></div><div><label>Place</label><select id="dash-f-place"><option value="All">All Places</option></select></div></div></div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center; margin-bottom: 20px;">
+                    <div class="box"><h3>INCOME</h3><b id="dash-num-inc" class="income-text">0.00 €</b></div>
+                    <div class="box"><h3>EXPENSES</h3><b id="dash-num-exp" class="expense-text">0.00 €</b></div>
+                    <div class="box"><h3>NET</h3><b id="dash-num-net">0.00 €</b></div>
+                </div>
+                <div class="dash-grid">
+                    <div class="box full-width"><h4>Monthly Trends</h4><div class="chart-container"><canvas id="barChart"></canvas></div></div>
+                    <div class="box"><h4>Top Entities Spending</h4><div class="chart-container"><canvas id="pieChart"></canvas></div></div>
+                    <div class="box"><h4>Spending by Place</h4><div class="chart-container"><canvas id="placeChart"></canvas></div></div>
+                </div>
             </div>
         </div>
     </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyANUsqIFOdBMyOBbzs1AZCpWOygkn27dIw",
@@ -140,24 +165,48 @@
     };
 
     const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
     const db = getFirestore(app);
 
     const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    
-    // Default data lists
     const SEED_ENTITIES = ["DPD","MRW","MEO SA","ALVES BANDEIRA","SALARY","INTERMARCHE","NET EMPREGOS","CTT","PAACK","VODAFONE","EDP","ÁGUAS DE COIMBRA","ZURICH SEGUROS","LEROY MERLIN","MODELO","WORTEN","SODICENTRO","PORTAGENS","STAPLES","MAKRO","TOPAZIO RENT","OFFICE RENT","WAREHOUSE RENT","AMAZON","VOIP","PROSEGUR","FIDELIDADE SEGUROS","CULLIGAN","COMMISSION","STUDIO 99","TRIFIDA","KONTABILE","PICAPONTO","ENDESA","CENTROFAX","FUNDACJA FIRMA DLA KASDEGO","BRISA","SWITL","SMARTEC","AMIGO","PARTNER DEVIDENS","SOCIAL SECURITY","FINANCES","LETS CALL","MICROSOFT","SOTECNISOL","SPANISH SIM CARDS","CONTINENTE","AUCHAN","LAWYER","ALDI","AAC","COMPANY VAN","ACCOUNY MANTAINANCE","VIA VERDE","GOOGLE","PASCOAL","WPS","TPLINK","VIDESP","INTERPREV","IKEA","TEAMS","CASA BAIA","BXO VALOR TRANSACO","MANUTAN","ALBERTO CAETANO","RIA SEGUROS","GRUPEME","IBERIA CONSULTANCY LDA","M. MEILAK & ASSOCIATES","COIMPACK","CEPSA","HEALTH PRIME UNLIMITED","PC COMPONENTES","BP","ACTION","RADIO POPULAR","GENERALYS SEGUROS","MVM","CARTUCHO","JYSK","TROVISCAIS","PC DIGA","GRENKE RENTING","UBER","MGM","EUROGRIP","100 METROS","EUPAGO","STAPLES","GALP","PAPIRO LDA","LUSITANIA SEGUROS","NACEX","COMPANY CAR","REFUNDS","SMARTMEDIA","MIXTRONICA","SUPERMESURA","MACOBEGO","BRICOMARCHE","LIDL","IBEROCAR","MEU SUPER","CONTROLAUTO","CLEANING CAR","HIPER EIRAS","REPSOL","NORAUTO","PINGO DOCE","SALTIGLOBO","VAT REFUND","MOVIFLOR","TROPEGAL","VOLL","TRANSFER BETWEEN ACCOUNTS","DISTINTOS DESTINOS","CARDOSO E SOUSA LDA","VIDAXL","TRANSFERENCIA INICIAL","PETROL","CASA YES","MILANNA","PRINK","HOMA","VITALIJUZ JANKUNAS","INDIANO","MULTIMAX","TANMAY NASKAR","ERVINS VANAG","BONUS","ZUMUB","NOTINO","MAKEUP","PEPCO","YULIA YANKUNENE","HONORATA JOZWIK","AIVARS LAKOTKO","ZENUP MARKETING LLC","DAIVA AGLINSKIENE","FLUX LEADS LLC","BONANNO ROSARIO DARIO","VYTAUTAS BIE","ANTANAS KLIMCIAUSKAS","ARTURAS PONOMARIOVAS","RASA UTYRIENE","INESE LEISANE","MINGAILE ARMINAITE","VALENTINA ANTONIUK","CHINES SHOP","RINOADS","TIP","WAN DI","DADDY'S LINE LLC","HERTZ CAR RENTING","QUADROS DELUX","RETURN","CARLOS MARQUES","DAN CAKE","WHITELIST PRO","REMIGIJUS JARMALA","J GOMES","ROMANS SVIRBUTOVICS","FIND PRODUCTS","OTHER","CGD","NOVO BANCO","WELLS","SMART CLIENTS","FNAC","NERINGA ZIDZIUNAITE","INGA BANZINIENE","FZ STARTUP CONSULTANCY LTD","PUSOMA ROZA"];
     const SEED_BANKS = ["NOVO BANCO","MAIN CGD","COD CGD","AGATA CGD","CAPITAL FUND MAIN","WH MAIN CGD","OFF MAIN CGD","TOPA MAIN CGD","CAPITAL FUND OFF","CAPITAL FUND WH","AGATA BPI"];
     const SEED_PLACES = ["OTHER","WAREHOUSE","OFFICE","TOPAZIO","COD","COURIER","POLAND","REFUND","DEW","OFF/WH","CROSSALE","CLIENT","PETROL","NC","COMMISSION","BANK"];
 
     let state = { banks: [], entities: [], places: [], transactions: [], initialBalances: {} };
     let charts = {};
+    let unsubtrans, unsublists, unsubinit;
 
-    window.onload = async () => {
-        initUI();
-        initCharts();
-        setupSync();
+    // ---------------- AUTH LOGIC ----------------
+    document.getElementById('btn-do-login').onclick = async () => {
+        const email = document.getElementById('login-email').value;
+        const pass = document.getElementById('login-pass').value;
+        const err = document.getElementById('login-error');
+        try {
+            await signInWithEmailAndPassword(auth, email, pass);
+        } catch (e) {
+            err.innerText = "Erro: " + e.message;
+            err.style.display = 'block';
+        }
     };
 
+    document.getElementById('btn-logout').onclick = () => signOut(auth);
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('app-content').style.display = 'block';
+            setupSync();
+        } else {
+            document.getElementById('login-screen').style.display = 'flex';
+            document.getElementById('app-content').style.display = 'none';
+            if (unsubtrans) unsubtrans();
+            if (unsublists) unsublists();
+            if (unsubinit) unsubinit();
+        }
+    });
+
+    // ---------------- APP LOGIC ----------------
     function initUI() {
         document.getElementById('ipt-date').valueAsDate = new Date();
         ['hist', 'dash'].forEach(p => {
@@ -178,16 +227,12 @@
     }
 
     async function setupSync() {
-        onSnapshot(query(collection(db, "transactions"), orderBy("date", "desc")), (snap) => {
+        unsubtrans = onSnapshot(query(collection(db, "transactions"), orderBy("date", "desc")), (snap) => {
             state.transactions = snap.docs.map(doc => ({id: doc.id, ...doc.data()}));
             render();
-            document.getElementById('loading-overlay').style.display = 'none';
-        }, (error) => {
-            console.error("Firebase Sync Error:", error);
-            alert("Connection error: " + error.message);
         });
 
-        onSnapshot(doc(db, "settings", "lists"), (docSnap) => {
+        unsublists = onSnapshot(doc(db, "settings", "lists"), (docSnap) => {
             if(docSnap.exists()){
                 const d = docSnap.data();
                 state.entities = d.entities || SEED_ENTITIES;
@@ -199,7 +244,7 @@
             render();
         });
 
-        onSnapshot(doc(db, "settings", "initialBalances"), (docSnap) => {
+        unsubinit = onSnapshot(doc(db, "settings", "initialBalances"), (docSnap) => {
             state.initialBalances = docSnap.exists() ? docSnap.data() : {};
             render();
         });
@@ -241,7 +286,7 @@
 
         state.banks.sort().forEach(b => {
             selBnk.innerHTML += `<option value="${b}">${b}</option>`;
-            selInitB.innerHTML += `<option value="${b}">${b}</option>`;
+            selInitBnk.innerHTML += `<option value="${b}">${b}</option>`;
             filtBnk.innerHTML += `<option value="${b}">${b}</option>`;
             bList.innerHTML += `<div class="manage-item"><span>${b}</span><button class="btn-del" data-type="banks" data-val="${b}">x</button></div>`;
         });
@@ -266,10 +311,12 @@
                     <td>${t.date}</td><td>${t.entity}</td><td>${t.method}</td><td>${t.bank}</td><td>${t.place}</td>
                     <td>${t.type}</td><td>${(t.net||0).toFixed(2)}</td><td>${(t.vat||0).toFixed(2)}</td>
                     <td class="${isInc?'income-text':'expense-text'}">${t.total.toFixed(2)}€</td>
-                    <td><button class="btn-del-trans" data-id="${t.id}">Del</button></td>
+                    <td><button class="btn-del-trans btn" style="background:#ff7675; padding: 2px 5px;" data-id="${t.id}">Del</button></td>
                 </tr>`;
             }
-            if(idx < 5) rBody.innerHTML += `<tr><td>${t.date}</td><td>${t.entity}</td><td>${t.bank}</td><td>${t.place}</td><td>${t.type}</td><td class="${isInc?'income-text':'expense-text'}">${t.total.toFixed(2)}€</td></tr>`;
+            if(idx < 5) {
+                rBody.innerHTML += `<tr><td>${t.date}</td><td>${t.entity}</td><td>${t.bank}</td><td>${t.place}</td><td>${t.type}</td><td class="${isInc?'income-text':'expense-text'}" align="right">${t.total.toFixed(2)}€</td><td><button class="btn-del-trans btn" style="background:#ff7675; padding: 2px 5px;" data-id="${t.id}">Del</button></td></tr>`;
+            }
         });
 
         const cardCont = document.getElementById('bank-cards-container');
@@ -293,43 +340,21 @@
     };
 
     document.getElementById('btn-register').onclick = async () => {
-        const btn = document.getElementById('btn-register');
-        const date = document.getElementById('ipt-date').value;
         const total = parseFloat(document.getElementById('ipt-total').value);
-
-        if(!date) return alert("Select a date");
-        if(isNaN(total) || total <= 0) return alert("Value must be greater than 0");
-
-        btn.disabled = true;
-        btn.innerText = "Saving...";
-
-        try {
-            await addDoc(collection(db, "transactions"), {
-                date: date,
-                entity: document.getElementById('sel-entity').value,
-                method: document.getElementById('sel-method').value,
-                bank: document.getElementById('sel-bank').value,
-                place: document.getElementById('sel-place-entry').value,
-                type: document.getElementById('sel-type').value,
-                net: parseFloat(document.getElementById('ipt-net').value) || 0,
-                vat: parseFloat(document.getElementById('ipt-vat').value) || 0,
-                total: total,
-                timestamp: new Date()
-            });
-            
-            // Success
-            document.getElementById('ipt-net').value = 0; 
-            document.getElementById('ipt-vat').value = 0;
-            document.getElementById('ipt-total').value = 0;
-            alert("Entry saved successfully!");
-
-        } catch (error) {
-            console.error("Save error:", error);
-            alert("Error saving: " + error.message + "\nCheck if Firebase Rules allow writing.");
-        } finally {
-            btn.disabled = false;
-            btn.innerText = "Register Entry";
-        }
+        const date = document.getElementById('ipt-date').value;
+        if(!total || !date) return alert("Select date and total");
+        await addDoc(collection(db, "transactions"), {
+            date: date,
+            entity: document.getElementById('sel-entity').value,
+            method: document.getElementById('sel-method').value,
+            bank: document.getElementById('sel-bank').value,
+            place: document.getElementById('sel-place-entry').value,
+            type: document.getElementById('sel-type').value,
+            net: parseFloat(document.getElementById('ipt-net').value) || 0,
+            vat: parseFloat(document.getElementById('ipt-vat').value) || 0,
+            total: total
+        });
+        document.getElementById('ipt-net').value = 0; document.getElementById('ipt-vat').value = 0;
     };
 
     async function deleteTransaction(id) {
@@ -344,28 +369,22 @@
         const val = document.getElementById(inputId).value.toUpperCase().trim();
         if(!val || state[type].includes(val)) return;
         const newList = [...state[type], val];
-        try {
-            await updateDoc(doc(db, "settings", "lists"), { [type]: newList });
-            document.getElementById(inputId).value = "";
-        } catch(e) { alert("Error adding item: " + e.message); }
+        await updateDoc(doc(db, "settings", "lists"), { [type]: newList });
+        document.getElementById(inputId).value = "";
     }
 
     async function deleteFromList(type, val) {
         if(!confirm("Remove " + val + "?")) return;
         const newList = state[type].filter(item => item !== val);
-        try {
-            await updateDoc(doc(db, "settings", "lists"), { [type]: newList });
-        } catch(e) { alert("Error removing item: " + e.message); }
+        await updateDoc(doc(db, "settings", "lists"), { [type]: newList });
     }
 
     document.getElementById('btn-save-init').onclick = async () => {
         const b = document.getElementById('sel-init-bank').value;
         const val = parseFloat(document.getElementById('ipt-init-val').value) || 0;
-        try {
-            const newInits = { ...state.initialBalances, [b]: val };
-            await setDoc(doc(db, "settings", "initialBalances"), newInits);
-            alert("Balance updated.");
-        } catch(e) { alert("Error: " + e.message); }
+        const newInits = { ...state.initialBalances, [b]: val };
+        await setDoc(doc(db, "settings", "initialBalances"), newInits);
+        alert("Initial balance saved.");
     };
 
     function initCharts() {
@@ -378,7 +397,7 @@
             options: { responsive: true, maintainAspectRatio: false }
         });
         charts.place = new Chart(document.getElementById('placeChart'), {
-            type: 'bar', data: { labels: [], datasets: [{ label: 'By Place', data: [], backgroundColor: '#8e44ad' }]},
+            type: 'bar', data: { labels: [], datasets: [{ label: 'Expenditure by Place', data: [], backgroundColor: '#8e44ad' }]},
             options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
         });
     }
@@ -430,6 +449,11 @@
         link.download = "Financial_Alcance_Report.csv";
         link.click();
     };
+
+    // Initialize UI on load
+    initUI();
+    initCharts();
+
 </script>
 </body>
 </html>
