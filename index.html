@@ -17,7 +17,7 @@
         .btn-login { width: 100%; background: var(--success); color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
         
         /* APP CONTENT */
-        #app-content { display: none; } /* Hidden until login */
+        #app-content { display: none; } 
 
         .nav-tabs { background: var(--primary); display: flex; padding: 0 20px; position: sticky; top: 0; z-index: 100; align-items: center; }
         .tab-btn { background: none; border: none; color: #bdc3c7; padding: 15px 25px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: 0.3s; border-bottom: 3px solid transparent; font-size: 13px; }
@@ -65,7 +65,7 @@
         </div>
     </div>
 
-    <!-- CONTEÚDO DO APP (ESCONDIDO ATÉ O LOGIN) -->
+    <!-- CONTEÚDO DO APP -->
     <div id="app-content">
         <nav class="nav-tabs">
             <button class="tab-btn active" data-tab="tab-entry">Entry & Balances</button>
@@ -106,7 +106,7 @@
                         </div>
                     </div>
                     <div>
-                        <div class="box" style="border-left-color: var(--capital);">
+                        <div class="box" style="border-left: 4px solid var(--capital);">
                             <h4>Initial Balance</h4>
                             <div style="display: flex; flex-direction: column; gap: 8px;">
                                 <select id="sel-init-bank"></select>
@@ -117,6 +117,7 @@
                         <div class="box"><h4>Entities</h4><div style="display: flex; gap: 5px;"><input type="text" id="ipt-new-entity" placeholder="Name..."><button class="btn btn-add" id="btn-add-entity">+</button></div><div id="list-entities" class="manage-list"></div></div>
                         <div class="box"><h4>Places</h4><div style="display: flex; gap: 5px;"><input type="text" id="ipt-new-place" placeholder="Name..."><button class="btn btn-add" id="btn-add-place">+</button></div><div id="list-places" class="manage-list"></div></div>
                         <div class="box"><h4>Banks</h4><div style="display: flex; gap: 5px;"><input type="text" id="ipt-new-bank" placeholder="Name..."><button class="btn btn-add" id="btn-add-bank">+</button></div><div id="list-banks" class="manage-list"></div></div>
+                        <button class="btn" id="btn-restore-defaults" style="background:#999; width:100%; margin-top:10px;">Restore Default Lists</button>
                     </div>
                 </div>
             </div>
@@ -139,7 +140,7 @@
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center; margin-bottom: 20px;">
                     <div class="box"><h3>INCOME</h3><b id="dash-num-inc" class="income-text">0.00 €</b></div>
                     <div class="box"><h3>EXPENSES</h3><b id="dash-num-exp" class="expense-text">0.00 €</b></div>
-                    <div class="box"><h3>NET</h3><b id="dash-num-net">0.00 €</b></div>
+                    <div class="box"><h3>NET RESULT</h3><b id="dash-num-net">0.00 €</b></div>
                 </div>
                 <div class="dash-grid">
                     <div class="box full-width"><h4>Monthly Trends</h4><div class="chart-container"><canvas id="barChart"></canvas></div></div>
@@ -153,7 +154,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, setDoc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyANUsqIFOdBMyOBbzs1AZCpWOygkn27dIw",
@@ -169,27 +170,23 @@
     const db = getFirestore(app);
 
     const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    
+    // LISTAS PADRÃO (O SISTEMA IRÁ RECORRER A ESTAS SE A FIREBASE ESTIVER VAZIA)
     const SEED_ENTITIES = ["DPD","MRW","MEO SA","ALVES BANDEIRA","SALARY","INTERMARCHE","NET EMPREGOS","CTT","PAACK","VODAFONE","EDP","ÁGUAS DE COIMBRA","ZURICH SEGUROS","LEROY MERLIN","MODELO","WORTEN","SODICENTRO","PORTAGENS","STAPLES","MAKRO","TOPAZIO RENT","OFFICE RENT","WAREHOUSE RENT","AMAZON","VOIP","PROSEGUR","FIDELIDADE SEGUROS","CULLIGAN","COMMISSION","STUDIO 99","TRIFIDA","KONTABILE","PICAPONTO","ENDESA","CENTROFAX","FUNDACJA FIRMA DLA KASDEGO","BRISA","SWITL","SMARTEC","AMIGO","PARTNER DEVIDENS","SOCIAL SECURITY","FINANCES","LETS CALL","MICROSOFT","SOTECNISOL","SPANISH SIM CARDS","CONTINENTE","AUCHAN","LAWYER","ALDI","AAC","COMPANY VAN","ACCOUNY MANTAINANCE","VIA VERDE","GOOGLE","PASCOAL","WPS","TPLINK","VIDESP","INTERPREV","IKEA","TEAMS","CASA BAIA","BXO VALOR TRANSACO","MANUTAN","ALBERTO CAETANO","RIA SEGUROS","GRUPEME","IBERIA CONSULTANCY LDA","M. MEILAK & ASSOCIATES","COIMPACK","CEPSA","HEALTH PRIME UNLIMITED","PC COMPONENTES","BP","ACTION","RADIO POPULAR","GENERALYS SEGUROS","MVM","CARTUCHO","JYSK","TROVISCAIS","PC DIGA","GRENKE RENTING","UBER","MGM","EUROGRIP","100 METROS","EUPAGO","STAPLES","GALP","PAPIRO LDA","LUSITANIA SEGUROS","NACEX","COMPANY CAR","REFUNDS","SMARTMEDIA","MIXTRONICA","SUPERMESURA","MACOBEGO","BRICOMARCHE","LIDL","IBEROCAR","MEU SUPER","CONTROLAUTO","CLEANING CAR","HIPER EIRAS","REPSOL","NORAUTO","PINGO DOCE","SALTIGLOBO","VAT REFUND","MOVIFLOR","TROPEGAL","VOLL","TRANSFER BETWEEN ACCOUNTS","DISTINTOS DESTINOS","CARDOSO E SOUSA LDA","VIDAXL","TRANSFERENCIA INICIAL","PETROL","CASA YES","MILANNA","PRINK","HOMA","VITALIJUZ JANKUNAS","INDIANO","MULTIMAX","TANMAY NASKAR","ERVINS VANAG","BONUS","ZUMUB","NOTINO","MAKEUP","PEPCO","YULIA YANKUNENE","HONORATA JOZWIK","AIVARS LAKOTKO","ZENUP MARKETING LLC","DAIVA AGLINSKIENE","FLUX LEADS LLC","BONANNO ROSARIO DARIO","VYTAUTAS BIE","ANTANAS KLIMCIAUSKAS","ARTURAS PONOMARIOVAS","RASA UTYRIENE","INESE LEISANE","MINGAILE ARMINAITE","VALENTINA ANTONIUK","CHINES SHOP","RINOADS","TIP","WAN DI","DADDY'S LINE LLC","HERTZ CAR RENTING","QUADROS DELUX","RETURN","CARLOS MARQUES","DAN CAKE","WHITELIST PRO","REMIGIJUS JARMALA","J GOMES","ROMANS SVIRBUTOVICS","FIND PRODUCTS","OTHER","CGD","NOVO BANCO","WELLS","SMART CLIENTS","FNAC","NERINGA ZIDZIUNAITE","INGA BANZINIENE","FZ STARTUP CONSULTANCY LTD","PUSOMA ROZA"];
     const SEED_BANKS = ["NOVO BANCO","MAIN CGD","COD CGD","AGATA CGD","CAPITAL FUND MAIN","WH MAIN CGD","OFF MAIN CGD","TOPA MAIN CGD","CAPITAL FUND OFF","CAPITAL FUND WH","AGATA BPI"];
     const SEED_PLACES = ["OTHER","WAREHOUSE","OFFICE","TOPAZIO","COD","COURIER","POLAND","REFUND","DEW","OFF/WH","CROSSALE","CLIENT","PETROL","NC","COMMISSION","BANK"];
 
-    let state = { banks: [], entities: [], places: [], transactions: [], initialBalances: {} };
+    let state = { banks: SEED_BANKS, entities: SEED_ENTITIES, places: SEED_PLACES, transactions: [], initialBalances: {} };
     let charts = {};
     let unsubtrans, unsublists, unsubinit;
 
-    // ---------------- AUTH LOGIC ----------------
+    // LOGIN
     document.getElementById('btn-do-login').onclick = async () => {
         const email = document.getElementById('login-email').value;
         const pass = document.getElementById('login-pass').value;
-        const err = document.getElementById('login-error');
-        try {
-            await signInWithEmailAndPassword(auth, email, pass);
-        } catch (e) {
-            err.innerText = "Erro: " + e.message;
-            err.style.display = 'block';
-        }
+        try { await signInWithEmailAndPassword(auth, email, pass); } 
+        catch (e) { document.getElementById('login-error').innerText = "Erro: " + e.message; document.getElementById('login-error').style.display = 'block'; }
     };
-
     document.getElementById('btn-logout').onclick = () => signOut(auth);
 
     onAuthStateChanged(auth, (user) => {
@@ -197,21 +194,23 @@
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('app-content').style.display = 'block';
             setupSync();
+            initUI();
+            initCharts();
         } else {
             document.getElementById('login-screen').style.display = 'flex';
             document.getElementById('app-content').style.display = 'none';
-            if (unsubtrans) unsubtrans();
-            if (unsublists) unsublists();
-            if (unsubinit) unsubinit();
+            if (unsubtrans) unsubtrans(); if (unsublists) unsublists(); if (unsubinit) unsubinit();
         }
     });
 
-    // ---------------- APP LOGIC ----------------
+    // UI INIT
     function initUI() {
         document.getElementById('ipt-date').valueAsDate = new Date();
         ['hist', 'dash'].forEach(p => {
             const fy = document.getElementById(p + '-f-year');
             const fm = document.getElementById(p + '-f-month');
+            fy.innerHTML = '<option value="All">All Years</option>';
+            fm.innerHTML = '<option value="All">All Months</option>';
             for(let y=2024; y<=2030; y++) fy.innerHTML += `<option value="${y}">${y}</option>`;
             MONTHS.forEach(m => fm.innerHTML += `<option value="${m}">${m}</option>`);
             fy.onchange = fm.onchange = () => (p === 'dash' ? refreshDashboard() : render());
@@ -266,7 +265,7 @@
 
         const curE = selEnt.value; const curB = selBnk.value; const curP = selPlaE.value;
         hBody.innerHTML = rBody.innerHTML = bList.innerHTML = eList.innerHTML = pList.innerHTML = "";
-        selEnt.innerHTML = selBnk.innerHTML = selInitB.innerHTML = selPlaE.innerHTML = "";
+        selEnt.innerHTML = ""; selBnk.innerHTML = ""; selInitB.innerHTML = ""; selPlaE.innerHTML = "";
         filtBnk.innerHTML = '<option value="All">All Banks</option>';
         filtPlaH.innerHTML = filtPlaD.innerHTML = '<option value="All">All Places</option>';
 
@@ -286,7 +285,7 @@
 
         state.banks.sort().forEach(b => {
             selBnk.innerHTML += `<option value="${b}">${b}</option>`;
-            selInitBnk.innerHTML += `<option value="${b}">${b}</option>`;
+            selInitB.innerHTML += `<option value="${b}">${b}</option>`;
             filtBnk.innerHTML += `<option value="${b}">${b}</option>`;
             bList.innerHTML += `<div class="manage-item"><span>${b}</span><button class="btn-del" data-type="banks" data-val="${b}">x</button></div>`;
         });
@@ -307,16 +306,9 @@
 
             const d = new Date(t.date); const tY = d.getFullYear().toString(); const tM = MONTHS[d.getMonth()];
             if((fY==="All" || tY===fY) && (fM==="All" || tM===fM) && (fB==="All" || t.bank===fB) && (fP==="All" || t.place===fP)) {
-                hBody.innerHTML += `<tr>
-                    <td>${t.date}</td><td>${t.entity}</td><td>${t.method}</td><td>${t.bank}</td><td>${t.place}</td>
-                    <td>${t.type}</td><td>${(t.net||0).toFixed(2)}</td><td>${(t.vat||0).toFixed(2)}</td>
-                    <td class="${isInc?'income-text':'expense-text'}">${t.total.toFixed(2)}€</td>
-                    <td><button class="btn-del-trans btn" style="background:#ff7675; padding: 2px 5px;" data-id="${t.id}">Del</button></td>
-                </tr>`;
+                hBody.innerHTML += `<tr><td>${t.date}</td><td>${t.entity}</td><td>${t.method}</td><td>${t.bank}</td><td>${t.place}</td><td>${t.type}</td><td>${(t.net||0).toFixed(2)}</td><td>${(t.vat||0).toFixed(2)}</td><td class="${isInc?'income-text':'expense-text'}">${t.total.toFixed(2)}€</td><td><button class="btn-del-trans btn" data-id="${t.id}" style="background:#ff7675; padding:2px 5px;">Del</button></td></tr>`;
             }
-            if(idx < 5) {
-                rBody.innerHTML += `<tr><td>${t.date}</td><td>${t.entity}</td><td>${t.bank}</td><td>${t.place}</td><td>${t.type}</td><td class="${isInc?'income-text':'expense-text'}" align="right">${t.total.toFixed(2)}€</td><td><button class="btn-del-trans btn" style="background:#ff7675; padding: 2px 5px;" data-id="${t.id}">Del</button></td></tr>`;
-            }
+            if(idx < 5) rBody.innerHTML += `<tr><td>${t.date}</td><td>${t.entity}</td><td>${t.bank}</td><td>${t.place}</td><td>${t.type}</td><td class="${isInc?'income-text':'expense-text'}" align="right">${t.total.toFixed(2)}€</td><td><button class="btn-del-trans btn" data-id="${t.id}" style="background:#ff7675; padding:2px 5px;">Del</button></td></tr>`;
         });
 
         const cardCont = document.getElementById('bank-cards-container');
@@ -327,9 +319,8 @@
         });
         cardCont.innerHTML += `<div class="card" style="background:var(--primary); color:white"><h3>CONSOLIDATED</h3><span class="val">${grand.toLocaleString('pt-PT', {style:'currency', currency:'EUR'})}</span></div>`;
         
-        document.querySelectorAll('.btn-del').forEach(b => b.onclick = (e) => deleteFromList(e.target.dataset.type, e.target.dataset.val));
-        document.querySelectorAll('.btn-del-trans').forEach(b => b.onclick = (e) => deleteTransaction(e.target.dataset.id));
-        
+        document.querySelectorAll('.btn-del').forEach(b => b.onclick = (e) => deleteFromList(e.target.closest('button').dataset.type, e.target.closest('button').dataset.val));
+        document.querySelectorAll('.btn-del-trans').forEach(b => b.onclick = (e) => deleteTransaction(e.target.closest('button').dataset.id));
         refreshDashboard();
     }
 
@@ -342,28 +333,22 @@
     document.getElementById('btn-register').onclick = async () => {
         const total = parseFloat(document.getElementById('ipt-total').value);
         const date = document.getElementById('ipt-date').value;
-        if(!total || !date) return alert("Select date and total");
+        if(!total || !date) return alert("Select date and value");
         await addDoc(collection(db, "transactions"), {
-            date: date,
-            entity: document.getElementById('sel-entity').value,
-            method: document.getElementById('sel-method').value,
-            bank: document.getElementById('sel-bank').value,
-            place: document.getElementById('sel-place-entry').value,
-            type: document.getElementById('sel-type').value,
-            net: parseFloat(document.getElementById('ipt-net').value) || 0,
-            vat: parseFloat(document.getElementById('ipt-vat').value) || 0,
-            total: total
+            date, entity: document.getElementById('sel-entity').value, method: document.getElementById('sel-method').value,
+            bank: document.getElementById('sel-bank').value, place: document.getElementById('sel-place-entry').value,
+            type: document.getElementById('sel-type').value, net: parseFloat(document.getElementById('ipt-net').value) || 0,
+            vat: parseFloat(document.getElementById('ipt-vat').value) || 0, total
         });
-        document.getElementById('ipt-net').value = 0; document.getElementById('ipt-vat').value = 0;
+        document.getElementById('ipt-net').value = 0; document.getElementById('ipt-vat').value = 0; document.getElementById('ipt-total').value = 0;
     };
 
-    async function deleteTransaction(id) {
-        if(confirm("Delete record?")) await deleteDoc(doc(db, "transactions", id));
-    }
+    async function deleteTransaction(id) { if(confirm("Delete record?")) await deleteDoc(doc(db, "transactions", id)); }
 
     document.getElementById('btn-add-entity').onclick = () => addToList('entities', 'ipt-new-entity');
     document.getElementById('btn-add-bank').onclick = () => addToList('banks', 'ipt-new-bank');
     document.getElementById('btn-add-place').onclick = () => addToList('places', 'ipt-new-place');
+    document.getElementById('btn-restore-defaults').onclick = async () => { if(confirm("Restore all defaults?")) await setDoc(doc(db, "settings", "lists"), { entities: SEED_ENTITIES, banks: SEED_BANKS, places: SEED_PLACES }); };
 
     async function addToList(type, inputId) {
         const val = document.getElementById(inputId).value.toUpperCase().trim();
@@ -384,22 +369,13 @@
         const val = parseFloat(document.getElementById('ipt-init-val').value) || 0;
         const newInits = { ...state.initialBalances, [b]: val };
         await setDoc(doc(db, "settings", "initialBalances"), newInits);
-        alert("Initial balance saved.");
+        alert("Balance saved.");
     };
 
     function initCharts() {
-        charts.bar = new Chart(document.getElementById('barChart'), { 
-            type: 'bar', data: { labels: MONTHS, datasets: [{label:'Income', backgroundColor:'#27ae60', data:[]}, {label:'Expenses', backgroundColor:'#e74c3c', data:[]}] },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-        charts.pie = new Chart(document.getElementById('pieChart'), { 
-            type: 'doughnut', data: { labels: [], datasets: [{data:[], backgroundColor:['#3498db','#9b59b6','#f1c40f','#e67e22','#1abc9c']}] },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-        charts.place = new Chart(document.getElementById('placeChart'), {
-            type: 'bar', data: { labels: [], datasets: [{ label: 'Expenditure by Place', data: [], backgroundColor: '#8e44ad' }]},
-            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
-        });
+        charts.bar = new Chart(document.getElementById('barChart'), { type: 'bar', data: { labels: MONTHS, datasets: [{label:'Income', backgroundColor:'#27ae60', data:[]}, {label:'Expenses', backgroundColor:'#e74c3c', data:[]}] }, options: { responsive: true, maintainAspectRatio: false } });
+        charts.pie = new Chart(document.getElementById('pieChart'), { type: 'doughnut', data: { labels: [], datasets: [{data:[], backgroundColor:['#3498db','#9b59b6','#f1c40f','#e67e22','#1abc9c']}] }, options: { responsive: true, maintainAspectRatio: false } });
+        charts.place = new Chart(document.getElementById('placeChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Expenditure by Place', data: [], backgroundColor: '#8e44ad' }]}, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false } });
     }
 
     function refreshDashboard() {
@@ -407,53 +383,27 @@
         const fY = document.getElementById('dash-f-year').value;
         const fM = document.getElementById('dash-f-month').value;
         const fP = document.getElementById('dash-f-place').value;
-        let tI = 0, tE = 0;
-        const entM = {}; const plaM = {};
+        let tI = 0, tE = 0; const entM = {}; const plaM = {};
         const monthly = {}; MONTHS.forEach(m => monthly[m] = { inc: 0, exp: 0 });
-
         state.transactions.forEach(t => {
             const d = new Date(t.date); const tY = d.getFullYear().toString(); const tM = MONTHS[d.getMonth()];
             const mY = (fY === "All" || tY === fY); const mM = (fM === "All" || tM === fM); const mP = (fP === "All" || t.place === fP);
-            if(mY && mM && mP) {
-                if(t.type.includes("INCOME") || t.type.includes("+")) tI += t.total;
-                else { tE += t.total; entM[t.entity] = (entM[t.entity] || 0) + t.total; plaM[t.place] = (plaM[t.place] || 0) + t.total; }
-            }
-            if(mY && mP) {
-                if(t.type.includes("INCOME") || t.type.includes("+")) monthly[tM].inc += t.total;
-                else monthly[tM].exp += t.total;
-            }
+            if(mY && mM && mP) { if(t.type.includes("INCOME") || t.type.includes("+")) tI += t.total; else { tE += t.total; entM[t.entity] = (entM[t.entity] || 0) + t.total; plaM[t.place] = (plaM[t.place] || 0) + t.total; } }
+            if(mY && mP) { if(t.type.includes("INCOME") || t.type.includes("+")) monthly[tM].inc += t.total; else monthly[tM].exp += t.total; }
         });
-
         document.getElementById('dash-num-inc').innerText = tI.toLocaleString('pt-PT') + " €";
         document.getElementById('dash-num-exp').innerText = tE.toLocaleString('pt-PT') + " €";
         document.getElementById('dash-num-net').innerText = (tI - tE).toLocaleString('pt-PT') + " €";
-        charts.bar.data.datasets[0].data = MONTHS.map(m => monthly[m].inc);
-        charts.bar.data.datasets[1].data = MONTHS.map(m => monthly[m].exp);
-        charts.bar.update();
-        const topE = Object.entries(entM).sort((a,b) => b[1]-a[1]).slice(0,5);
-        charts.pie.data.labels = topE.map(e => e[0]);
-        charts.pie.data.datasets[0].data = topE.map(e => e[1]);
-        charts.pie.update();
-        const topP = Object.entries(plaM).sort((a,b) => b[1]-a[1]);
-        charts.place.data.labels = topP.map(p => p[0]);
-        charts.place.data.datasets[0].data = topP.map(p => p[1]);
-        charts.place.update();
+        charts.bar.data.datasets[0].data = MONTHS.map(m => monthly[m].inc); charts.bar.data.datasets[1].data = MONTHS.map(m => monthly[m].exp); charts.bar.update();
+        const topE = Object.entries(entM).sort((a,b) => b[1]-a[1]).slice(0,5); charts.pie.data.labels = topE.map(e => e[0]); charts.pie.data.datasets[0].data = topE.map(e => e[1]); charts.pie.update();
+        const topP = Object.entries(plaM).sort((a,b) => b[1]-a[1]); charts.place.data.labels = topP.map(p => p[0]); charts.place.data.datasets[0].data = topP.map(p => p[1]); charts.place.update();
     }
 
     document.getElementById('btn-export').onclick = () => {
         let csv = "\ufeffDate;Entity;Method;Bank;Place;Type;Net;VAT;Total\n";
         state.transactions.forEach(t => csv += `${t.date};${t.entity};${t.method};${t.bank};${t.place};${t.type};${t.net};${t.vat};${t.total}\n`);
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = "Financial_Alcance_Report.csv";
-        link.click();
+        const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); link.download = "Financial_Alcance_Report.csv"; link.click();
     };
-
-    // Initialize UI on load
-    initUI();
-    initCharts();
-
 </script>
 </body>
 </html>
