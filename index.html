@@ -5,18 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WH Pro - Secured Financial System</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <style>
         :root { --primary: #2c3e50; --cgd: #0056b3; --capital: #8e44ad; --success: #27ae60; --danger: #e74c3c; --bg: #f8f9fa; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); margin: 0; color: #333; overflow-x: hidden; }
         
-        /* LOGIN SCREEN */
         #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--primary); display: flex; justify-content: center; align-items: center; z-index: 10000; }
         .login-box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 320px; text-align: center; }
         .login-box h2 { margin-bottom: 20px; color: var(--primary); }
         .login-box input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
         .btn-login { width: 100%; background: var(--success); color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
         
-        /* APP CONTENT */
         #app-content { display: none; } 
 
         .nav-tabs { background: var(--primary); display: flex; padding: 0 20px; position: sticky; top: 0; z-index: 100; align-items: center; }
@@ -48,13 +47,15 @@
         .manage-list { max-height: 180px; overflow-y: auto; border: 1px solid #f1f1f1; padding: 5px; border-radius: 5px; background: #fafafa; }
         .manage-item { display:flex; justify-content:space-between; padding:4px 8px; border-bottom:1px solid #eee; align-items: center; font-size: 10px; }
         .dash-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; }
-        .full-width { grid-column: span 2; }
         .chart-container { position: relative; height: 300px; width: 100%; }
+        
+        /* ESTILO IMPORTAÇÃO */
+        .import-table input, .import-table select { width: 100%; padding: 4px; font-size: 11px; border: 1px solid #ddd; }
+        .import-table tr:hover { background: #f0f7ff; }
     </style>
 </head>
 <body>
 
-    <!-- TELA DE LOGIN -->
     <div id="login-screen">
         <div class="login-box">
             <h2>WH Pro Login</h2>
@@ -65,18 +66,19 @@
         </div>
     </div>
 
-    <!-- CONTEÚDO DO APP -->
     <div id="app-content">
         <nav class="nav-tabs">
             <button class="tab-btn active" data-tab="tab-entry">Entry & Balances</button>
+            <button class="tab-btn" data-tab="tab-import">Import Excel</button>
             <button class="tab-btn" data-tab="tab-history">History</button>
             <button class="tab-btn" data-tab="tab-dashboard">Dashboard</button>
-            <button class="btn-logout" id="btn-logout">Sair / Logout</button>
+            <button class="btn-logout" id="btn-logout">Sair</button>
         </nav>
 
         <div class="container">
             <div class="top-summary" id="bank-cards-container"></div>
 
+            <!-- TAB ENTRY -->
             <div id="tab-entry" class="tab-content active">
                 <div style="display: grid; grid-template-columns: 2.8fr 1fr; gap: 20px;">
                     <div>
@@ -84,7 +86,7 @@
                             <h4>New Transaction</h4>
                             <div class="form-grid">
                                 <div><label>Date</label><input type="date" id="ipt-date"></div>
-                                <div><label>Doc Number</label><input type="text" id="ipt-doc" placeholder="Invoice #"></div> <!-- NOVO CAMPO -->
+                                <div><label>Doc Number</label><input type="text" id="ipt-doc" placeholder="Invoice #"></div>
                                 <div><label>Entity</label><select id="sel-entity"></select></div>
                                 <div><label>Method</label><select id="sel-method"><option value="BANK">BANK</option><option value="CASH">CASH</option></select></div>
                                 <div><label>Bank Account</label><select id="sel-bank"></select></div>
@@ -102,7 +104,7 @@
                             </div>
                         </div>
                         <div class="box">
-                            <h4>Recent Activity (By Introduction)</h4>
+                            <h4>Recent Activity</h4>
                             <div class="table-container"><table><thead><tr><th>Date</th><th>Doc No.</th><th>Entity</th><th>Bank</th><th>Place</th><th>Type</th><th align="right">Total</th><th>Action</th></tr></thead><tbody id="table-recent"></tbody></table></div>
                         </div>
                     </div>
@@ -123,28 +125,66 @@
                 </div>
             </div>
 
+            <!-- TAB IMPORT EXCEL -->
+            <div id="tab-import" class="tab-content">
+                <div class="box">
+                    <h4>Bulk Import from Excel (Starts Row 2)</h4>
+                    <p style="font-size: 11px; color: #666;">Colunas: D=Total, E=Doc#, F=Date, G=Entity, H=Method, I=Bank, J=Place, K=Type.</p>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="file" id="excel-file" accept=".xlsx, .xls">
+                        <button class="btn" id="btn-process-excel" style="background: var(--capital);">Mapear Ficheiro</button>
+                    </div>
+                </div>
+                <div class="box" id="import-preview-box" style="display:none;">
+                    <h4>Revisão de Importação (<span id="import-count">0</span> movimentos)</h4>
+                    <div class="table-container">
+                        <table class="import-table">
+                            <thead>
+                                <tr>
+                                    <th>Date (F)</th>
+                                    <th>Doc No (E)</th>
+                                    <th>Entity (G)</th>
+                                    <th>Method (H)</th>
+                                    <th>Bank (I)</th>
+                                    <th>Place (J)</th>
+                                    <th>Type (K)</th>
+                                    <th>Total (D)</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-import-body"></tbody>
+                        </table>
+                    </div>
+                    <div style="margin-top: 20px; text-align: right;">
+                        <button class="btn" id="btn-save-bulk" style="background: var(--success); padding: 15px 30px;">CONFIRMAR E REGISTAR TUDO</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB HISTORY -->
             <div id="tab-history" class="tab-content">
                 <div class="box">
                     <div class="form-grid">
-                        <div><label>Year</label><select id="hist-f-year"><option value="All">All Years</option></select></div>
-                        <div><label>Month</label><select id="hist-f-month"><option value="All">All Months</option></select></div>
-                        <div><label>Bank</label><select id="hist-f-bank"><option value="All">All Banks</option></select></div>
-                        <div><label>Place</label><select id="hist-f-place"><option value="All">All Places</option></select></div>
+                        <div><label>Year</label><select id="hist-f-year"></select></div>
+                        <div><label>Month</label><select id="hist-f-month"></select></div>
+                        <div><label>Bank</label><select id="hist-f-bank"></select></div>
+                        <div><label>Place</label><select id="hist-f-place"></select></div>
                         <button class="btn" id="btn-export" style="background:var(--success)">Export CSV</button>
                     </div>
                 </div>
                 <div class="table-container box"><table><thead><tr><th>Date</th><th>Doc No.</th><th>Entity</th><th>Method</th><th>Bank</th><th>Place</th><th>Type</th><th>Net</th><th>VAT</th><th>Total</th><th>Action</th></tr></thead><tbody id="table-history-body"></tbody></table></div>
             </div>
 
+            <!-- TAB DASHBOARD -->
             <div id="tab-dashboard" class="tab-content">
-                <div class="box"><div class="form-grid"><div><label>Year</label><select id="dash-f-year"><option value="All">All Years</option></select></div><div><label>Month</label><select id="dash-f-month"><option value="All">All Months</option></select></div><div><label>Place</label><select id="dash-f-place"><option value="All">All Places</option></select></div></div></div>
+                <div class="box"><div class="form-grid"><div><label>Year</label><select id="dash-f-year"></select></div><div><label>Month</label><select id="dash-f-month"></select></div><div><label>Place</label><select id="dash-f-place"></select></div></div></div>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: center; margin-bottom: 20px;">
                     <div class="box"><h3>INCOME</h3><b id="dash-num-inc" class="income-text">0.00 €</b></div>
                     <div class="box"><h3>EXPENSES</h3><b id="dash-num-exp" class="expense-text">0.00 €</b></div>
                     <div class="box"><h3>NET RESULT</h3><b id="dash-num-net">0.00 €</b></div>
                 </div>
                 <div class="dash-grid">
-                    <div class="box full-width"><h4>Monthly Trends</h4><div class="chart-container"><canvas id="barChart"></canvas></div></div>
+                    <div class="box" style="grid-column: span 2;"><h4>Monthly Trends</h4><div class="chart-container"><canvas id="barChart"></canvas></div></div>
                     <div class="box"><h4>Top Entities Spending</h4><div class="chart-container"><canvas id="pieChart"></canvas></div></div>
                     <div class="box"><h4>Spending by Place</h4><div class="chart-container"><canvas id="placeChart"></canvas></div></div>
                 </div>
@@ -171,7 +211,6 @@
     const db = getFirestore(app);
 
     const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    
     const SEED_ENTITIES = ["DPD","MRW","MEO SA","ALVES BANDEIRA","SALARY","INTERMARCHE","NET EMPREGOS","CTT","PAACK","VODAFONE","EDP","ÁGUAS DE COIMBRA","ZURICH SEGUROS","LEROY MERLIN","MODELO","WORTEN","SODICENTRO","PORTAGENS","STAPLES","MAKRO","TOPAZIO RENT","OFFICE RENT","WAREHOUSE RENT","AMAZON","VOIP","PROSEGUR","FIDELIDADE SEGUROS","CULLIGAN","COMMISSION","STUDIO 99","TRIFIDA","KONTABILE","PICAPONTO","ENDESA","CENTROFAX","FUNDACJA FIRMA DLA KASDEGO","BRISA","SWITL","SMARTEC","AMIGO","PARTNER DEVIDENS","SOCIAL SECURITY","FINANCES","LETS CALL","MICROSOFT","SOTECNISOL","SPANISH SIM CARDS","CONTINENTE","AUCHAN","LAWYER","ALDI","AAC","COMPANY VAN","ACCOUNY MANTAINANCE","VIA VERDE","GOOGLE","PASCOAL","WPS","TPLINK","VIDESP","INTERPREV","IKEA","TEAMS","CASA BAIA","BXO VALOR TRANSACO","MANUTAN","ALBERTO CAETANO","RIA SEGUROS","GRUPEME","IBERIA CONSULTANCY LDA","M. MEILAK & ASSOCIATES","COIMPACK","CEPSA","HEALTH PRIME UNLIMITED","PC COMPONENTES","BP","ACTION","RADIO POPULAR","GENERALYS SEGUROS","MVM","CARTUCHO","JYSK","TROVISCAIS","PC DIGA","GRENKE RENTING","UBER","MGM","EUROGRIP","100 METROS","EUPAGO","STAPLES","GALP","PAPIRO LDA","LUSITANIA SEGUROS","NACEX","COMPANY CAR","REFUNDS","SMARTMEDIA","MIXTRONICA","SUPERMESURA","MACOBEGO","BRICOMARCHE","LIDL","IBEROCAR","MEU SUPER","CONTROLAUTO","CLEANING CAR","HIPER EIRAS","REPSOL","NORAUTO","PINGO DOCE","SALTIGLOBO","VAT REFUND","MOVIFLOR","TROPEGAL","VOLL","TRANSFER BETWEEN ACCOUNTS","DISTINTOS DESTINOS","CARDOSO E SOUSA LDA","VIDAXL","TRANSFERENCIA INICIAL","PETROL","CASA YES","MILANNA","PRINK","HOMA","VITALIJUZ JANKUNAS","INDIANO","MULTIMAX","TANMAY NASKAR","ERVINS VANAG","BONUS","ZUMUB","NOTINO","MAKEUP","PEPCO","YULIA YANKUNENE","HONORATA JOZWIK","AIVARS LAKOTKO","ZENUP MARKETING LLC","DAIVA AGLINSKIENE","FLUX LEADS LLC","BONANNO ROSARIO DARIO","VYTAUTAS BIE","ANTANAS KLIMCIAUSKAS","ARTURAS PONOMARIOVAS","RASA UTYRIENE","INESE LEISANE","MINGAILE ARMINAITE","VALENTINA ANTONIUK","CHINES SHOP","RINOADS","TIP","WAN DI","DADDY'S LINE LLC","HERTZ CAR RENTING","QUADROS DELUX","RETURN","CARLOS MARQUES","DAN CAKE","WHITELIST PRO","REMIGIJUS JARMALA","J GOMES","ROMANS SVIRBUTOVICS","FIND PRODUCTS","OTHER","CGD","NOVO BANCO","WELLS","SMART CLIENTS","FNAC","NERINGA ZIDZIUNAITE","INGA BANZINIENE","FZ STARTUP CONSULTANCY LTD","PUSOMA ROZA"];
     const SEED_BANKS = ["NOVO BANCO","MAIN CGD","COD CGD","AGATA CGD","CAPITAL FUND MAIN","WH MAIN CGD","OFF MAIN CGD","TOPA MAIN CGD","CAPITAL FUND OFF","CAPITAL FUND WH","AGATA BPI"];
     const SEED_PLACES = ["OTHER","WAREHOUSE","OFFICE","TOPAZIO","COD","COURIER","POLAND","REFUND","DEW","OFF/WH","CROSSALE","CLIENT","PETROL","NC","COMMISSION","BANK"];
@@ -180,7 +219,7 @@
     let charts = {};
     let unsubtrans, unsublists, unsubinit;
 
-    // LOGIN
+    // AUTH
     document.getElementById('btn-do-login').onclick = async () => {
         const email = document.getElementById('login-email').value;
         const pass = document.getElementById('login-pass').value;
@@ -199,7 +238,6 @@
         } else {
             document.getElementById('login-screen').style.display = 'flex';
             document.getElementById('app-content').style.display = 'none';
-            if (unsubtrans) unsubtrans(); if (unsublists) unsublists(); if (unsubinit) unsubinit();
         }
     });
 
@@ -225,29 +263,25 @@
     }
 
     async function setupSync() {
-        unsubtrans = onSnapshot(collection(db, "transactions"), (snap) => {
+        onSnapshot(collection(db, "transactions"), (snap) => {
             const rawData = snap.docs.map(doc => ({id: doc.id, ...doc.data()}));
             state.transactions = rawData.sort((a, b) => {
-                const timeA = a.createdAt ? a.createdAt.toMillis() : new Date(a.date).getTime();
-                const timeB = b.createdAt ? b.createdAt.toMillis() : new Date(b.date).getTime();
-                return timeB - timeA;
+                const tA = a.createdAt ? a.createdAt.toMillis() : new Date(a.date).getTime();
+                const tB = b.createdAt ? b.createdAt.toMillis() : new Date(b.date).getTime();
+                return tB - tA;
             });
             render();
         });
-
-        unsublists = onSnapshot(doc(db, "settings", "lists"), (docSnap) => {
+        onSnapshot(doc(db, "settings", "lists"), (docSnap) => {
             if(docSnap.exists()){
                 const d = docSnap.data();
                 state.entities = d.entities || SEED_ENTITIES;
                 state.banks = d.banks || SEED_BANKS;
                 state.places = d.places || SEED_PLACES;
-            } else {
-                setDoc(doc(db, "settings", "lists"), { entities: SEED_ENTITIES, banks: SEED_BANKS, places: SEED_PLACES });
             }
             render();
         });
-
-        unsubinit = onSnapshot(doc(db, "settings", "initialBalances"), (docSnap) => {
+        onSnapshot(doc(db, "settings", "initialBalances"), (docSnap) => {
             state.initialBalances = docSnap.exists() ? docSnap.data() : {};
             render();
         });
@@ -298,26 +332,22 @@
         const balances = {};
         state.banks.forEach(b => balances[b] = state.initialBalances[b] || 0);
 
+        state.transactions.forEach((t, idx) => {
+            const isInc = (t.type.includes("INCOME") || t.type.includes("+"));
+            const val = isInc ? t.total : -t.total;
+            if(balances[t.bank] !== undefined) balances[t.bank] += val;
+            if(idx < 8) {
+                rBody.innerHTML += `<tr><td>${t.date}</td><td>${t.docNo || '-'}</td><td>${t.entity}</td><td>${t.bank}</td><td>${t.place}</td><td>${t.type}</td><td class="${isInc?'income-text':'expense-text'}" align="right">${t.total.toFixed(2)}€</td><td><button class="btn-del-trans btn" data-id="${t.id}" style="background:#ff7675; padding:2px 5px;">Del</button></td></tr>`;
+            }
+        });
+
+        const historySorted = [...state.transactions].sort((a,b) => new Date(b.date) - new Date(a.date));
         const fY = document.getElementById('hist-f-year').value;
         const fM = document.getElementById('hist-f-month').value;
         const fB = document.getElementById('hist-f-bank').value;
         const fP = document.getElementById('hist-f-place').value;
 
-        const historySortedByCalendar = [...state.transactions].sort((a,b) => new Date(b.date) - new Date(a.date));
-
-        // RENDER RECENT ACTIVITY
-        state.transactions.forEach((t, idx) => {
-            const isInc = (t.type.includes("INCOME") || t.type.includes("+"));
-            const val = isInc ? t.total : -t.total;
-            if(balances[t.bank] !== undefined) balances[t.bank] += val;
-
-            if(idx < 10) { 
-                rBody.innerHTML += `<tr><td>${t.date}</td><td>${t.docNo || '-'}</td><td>${t.entity}</td><td>${t.bank}</td><td>${t.place}</td><td>${t.type}</td><td class="${isInc?'income-text':'expense-text'}" align="right">${t.total.toFixed(2)}€</td><td><button class="btn-del-trans btn" data-id="${t.id}" style="background:#ff7675; padding:2px 5px;">Del</button></td></tr>`;
-            }
-        });
-
-        // RENDER HISTORY
-        historySortedByCalendar.forEach((t) => {
+        historySorted.forEach((t) => {
             const isInc = (t.type.includes("INCOME") || t.type.includes("+"));
             const d = new Date(t.date); const tY = d.getFullYear().toString(); const tM = MONTHS[d.getMonth()];
             if((fY==="All" || tY===fY) && (fM==="All" || tM===fM) && (fB==="All" || t.bank===fB) && (fP==="All" || t.place===fP)) {
@@ -338,6 +368,7 @@
         refreshDashboard();
     }
 
+    // REGISTRO MANUAL
     document.getElementById('ipt-net').oninput = document.getElementById('ipt-vat').oninput = () => {
         const n = parseFloat(document.getElementById('ipt-net').value) || 0;
         const v = parseFloat(document.getElementById('ipt-vat').value) || 0;
@@ -347,59 +378,159 @@
     document.getElementById('btn-register').onclick = async () => {
         const total = parseFloat(document.getElementById('ipt-total').value);
         const date = document.getElementById('ipt-date').value;
-        const docNo = document.getElementById('ipt-doc').value; // PEGAR DOC NUMBER
         if(!total || !date) return alert("Select date and value");
-        
         await addDoc(collection(db, "transactions"), {
-            date, 
-            docNo, // GUARDAR DOC NUMBER
-            entity: document.getElementById('sel-entity').value, 
-            method: document.getElementById('sel-method').value,
-            bank: document.getElementById('sel-bank').value, 
-            place: document.getElementById('sel-place-entry').value,
-            type: document.getElementById('sel-type').value, 
-            net: parseFloat(document.getElementById('ipt-net').value) || 0,
-            vat: parseFloat(document.getElementById('ipt-vat').value) || 0, 
-            total,
-            createdAt: serverTimestamp()
+            date, docNo: document.getElementById('ipt-doc').value,
+            entity: document.getElementById('sel-entity').value, method: document.getElementById('sel-method').value,
+            bank: document.getElementById('sel-bank').value, place: document.getElementById('sel-place-entry').value,
+            type: document.getElementById('sel-type').value, net: parseFloat(document.getElementById('ipt-net').value) || 0,
+            vat: parseFloat(document.getElementById('ipt-vat').value) || 0, total, createdAt: serverTimestamp()
         });
-        document.getElementById('ipt-doc').value = ""; // LIMPAR CAMPO
-        document.getElementById('ipt-net').value = 0; document.getElementById('ipt-vat').value = 0; document.getElementById('ipt-total').value = 0;
+        document.getElementById('ipt-doc').value = ""; document.getElementById('ipt-net').value = 0;
     };
 
-    async function deleteTransaction(id) { if(confirm("Delete record?")) await deleteDoc(doc(db, "transactions", id)); }
+    // --- AUXILIARY EXCEL HELPERS ---
+    function excelDateToJS(serial) {
+        if(!serial || isNaN(serial)) return new Date().toISOString().split('T')[0];
+        const date = new Date(Math.round((serial - 25569) * 86400 * 1000));
+        return date.toISOString().split('T')[0];
+    }
 
+    function createOptions(list, selectedVal) {
+        return list.map(item => {
+            const isSel = String(item).toUpperCase() === String(selectedVal).toUpperCase() ? 'selected' : '';
+            return `<option value="${item}" ${isSel}>${item}</option>`;
+        }).join('');
+    }
+
+    // --- EXCEL PROCESSING ---
+    document.getElementById('btn-process-excel').onclick = () => {
+        const file = document.getElementById('excel-file').files[0];
+        if(!file) return alert("Selecione o ficheiro");
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: ""});
+
+            const previewBody = document.getElementById('table-import-body');
+            previewBody.innerHTML = "";
+            let count = 0;
+
+            rows.forEach((row, index) => {
+                // SKIP HEADER (Starts from Row 2, index 1)
+                if (index === 0) return;
+
+                // Validation: Coluna D (Índice 3) deve ter valor
+                const valRaw = row[3];
+                if (valRaw === undefined || valRaw === "" || isNaN(parseFloat(valRaw))) return;
+
+                const totalVal = parseFloat(valRaw);
+                const docNo    = row[4] || ""; // E
+                const dateRaw  = row[5];       // F
+                const entity   = row[6] || ""; // G
+                const method   = row[7] || "BANK"; // H
+                const bank     = row[8] || ""; // I
+                const place    = row[9] || ""; // J
+                const type     = row[10] || "EXPENSES"; // K
+
+                const dateVal = (typeof dateRaw === 'number') ? excelDateToJS(dateRaw) : dateRaw || new Date().toISOString().split('T')[0];
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><input type="date" class="imp-date" value="${dateVal}"></td>
+                    <td><input type="text" class="imp-doc" value="${docNo}"></td>
+                    <td><select class="imp-ent">${createOptions(state.entities, entity)}</select></td>
+                    <td><select class="imp-meth"><option value="BANK" ${method==="BANK"?'selected':''}>BANK</option><option value="CASH" ${method==="CASH"?'selected':''}>CASH</option></select></td>
+                    <td><select class="imp-bank">${createOptions(state.banks, bank)}</select></td>
+                    <td><select class="imp-place">${createOptions(state.places, place)}</select></td>
+                    <td><select class="imp-type">
+                        <option value="EXPENSES" ${type==="EXPENSES"?'selected':''}>EXPENSES</option>
+                        <option value="INCOME" ${type==="INCOME"?'selected':''}>INCOME</option>
+                        <option value="TRANSFER +" ${type==="TRANSFER +"?'selected':''}>TRANSFER +</option>
+                        <option value="TRANSFER -" ${type==="TRANSFER -"?'selected':''}>TRANSFER -</option>
+                    </select></td>
+                    <td><input type="number" step="0.01" class="imp-total" value="${totalVal.toFixed(2)}"></td>
+                    <td><button class="btn btn-del" onclick="this.closest('tr').remove()">X</button></td>
+                `;
+                previewBody.appendChild(tr);
+                count++;
+            });
+
+            if(count > 0) {
+                document.getElementById('import-preview-box').style.display = "block";
+                document.getElementById('import-count').innerText = count;
+            } else {
+                alert("Nenhuma linha de dados (após o cabeçalho) foi encontrada.");
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    };
+
+    document.getElementById('btn-save-bulk').onclick = async () => {
+        const rows = document.querySelectorAll('#table-import-body tr');
+        if(!confirm(`Importar ${rows.length} movimentos?`)) return;
+
+        const btn = document.getElementById('btn-save-bulk');
+        btn.disabled = true; btn.innerText = "A guardar...";
+
+        try {
+            for (const row of rows) {
+                const data = {
+                    date: row.querySelector('.imp-date').value,
+                    docNo: row.querySelector('.imp-doc').value,
+                    entity: row.querySelector('.imp-ent').value,
+                    method: row.querySelector('.imp-meth').value,
+                    bank: row.querySelector('.imp-bank').value,
+                    place: row.querySelector('.imp-place').value,
+                    type: row.querySelector('.imp-type').value,
+                    total: parseFloat(row.querySelector('.imp-total').value),
+                    net: parseFloat(row.querySelector('.imp-total').value),
+                    vat: 0,
+                    createdAt: serverTimestamp()
+                };
+                await addDoc(collection(db, "transactions"), data);
+            }
+            alert("Importação concluída!");
+            document.getElementById('import-preview-box').style.display = "none";
+        } catch (e) { alert("Erro: " + e.message); }
+        finally { btn.disabled = false; btn.innerText = "CONFIRMAR E REGISTAR TUDO"; }
+    };
+
+    // LIST FUNCTIONS
+    async function deleteTransaction(id) { if(confirm("Apagar?")) await deleteDoc(doc(db, "transactions", id)); }
     document.getElementById('btn-add-entity').onclick = () => addToList('entities', 'ipt-new-entity');
     document.getElementById('btn-add-bank').onclick = () => addToList('banks', 'ipt-new-bank');
     document.getElementById('btn-add-place').onclick = () => addToList('places', 'ipt-new-place');
-    document.getElementById('btn-restore-defaults').onclick = async () => { if(confirm("Restore all defaults?")) await setDoc(doc(db, "settings", "lists"), { entities: SEED_ENTITIES, banks: SEED_BANKS, places: SEED_PLACES }); };
+    document.getElementById('btn-restore-defaults').onclick = async () => { if(confirm("Restaurar?")) await setDoc(doc(db, "settings", "lists"), { entities: SEED_ENTITIES, banks: SEED_BANKS, places: SEED_PLACES }); };
 
-    async function addToList(type, inputId) {
-        const val = document.getElementById(inputId).value.toUpperCase().trim();
+    async function addToList(type, id) {
+        const val = document.getElementById(id).value.toUpperCase().trim();
         if(!val || state[type].includes(val)) return;
         const newList = [...state[type], val];
         await updateDoc(doc(db, "settings", "lists"), { [type]: newList });
-        document.getElementById(inputId).value = "";
+        document.getElementById(id).value = "";
     }
 
     async function deleteFromList(type, val) {
-        if(!confirm("Remove " + val + "?")) return;
-        const newList = state[type].filter(item => item !== val);
+        if(!confirm("Remover " + val + "?")) return;
+        const newList = state[type].filter(i => i !== val);
         await updateDoc(doc(db, "settings", "lists"), { [type]: newList });
     }
 
     document.getElementById('btn-save-init').onclick = async () => {
         const b = document.getElementById('sel-init-bank').value;
         const val = parseFloat(document.getElementById('ipt-init-val').value) || 0;
-        const newInits = { ...state.initialBalances, [b]: val };
-        await setDoc(doc(db, "settings", "initialBalances"), newInits);
-        alert("Balance saved.");
+        await setDoc(doc(db, "settings", "initialBalances"), { ...state.initialBalances, [b]: val });
+        alert("Guardado.");
     };
 
     function initCharts() {
         charts.bar = new Chart(document.getElementById('barChart'), { type: 'bar', data: { labels: MONTHS, datasets: [{label:'Income', backgroundColor:'#27ae60', data:[]}, {label:'Expenses', backgroundColor:'#e74c3c', data:[]}] }, options: { responsive: true, maintainAspectRatio: false } });
         charts.pie = new Chart(document.getElementById('pieChart'), { type: 'doughnut', data: { labels: [], datasets: [{data:[], backgroundColor:['#3498db','#9b59b6','#f1c40f','#e67e22','#1abc9c']}] }, options: { responsive: true, maintainAspectRatio: false } });
-        charts.place = new Chart(document.getElementById('placeChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Expenditure by Place', data: [], backgroundColor: '#8e44ad' }]}, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false } });
+        charts.place = new Chart(document.getElementById('placeChart'), { type: 'bar', data: { labels: [], datasets: [{ label: 'Expenditure', data: [], backgroundColor: '#8e44ad' }]}, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false } });
     }
 
     function refreshDashboard() {
@@ -411,9 +542,14 @@
         const monthly = {}; MONTHS.forEach(m => monthly[m] = { inc: 0, exp: 0 });
         state.transactions.forEach(t => {
             const d = new Date(t.date); const tY = d.getFullYear().toString(); const tM = MONTHS[d.getMonth()];
-            const mY = (fY === "All" || tY === fY); const mM = (fM === "All" || tM === fM); const mP = (fP === "All" || t.place === fP);
-            if(mY && mM && mP) { if(t.type.includes("INCOME") || t.type.includes("+")) tI += t.total; else { tE += t.total; entM[t.entity] = (entM[t.entity] || 0) + t.total; plaM[t.place] = (plaM[t.place] || 0) + t.total; } }
-            if(mY && mP) { if(t.type.includes("INCOME") || t.type.includes("+")) monthly[tM].inc += t.total; else monthly[tM].exp += t.total; }
+            const match = (fY === "All" || tY === fY) && (fM === "All" || tM === fM) && (fP === "All" || t.place === fP);
+            if(match) { 
+                if(t.type.includes("INCOME") || t.type.includes("+")) tI += t.total; 
+                else { tE += t.total; entM[t.entity] = (entM[t.entity] || 0) + t.total; plaM[t.place] = (plaM[t.place] || 0) + t.total; } 
+            }
+            if((fY === "All" || tY === fY) && (fP === "All" || t.place === fP)) {
+                if(t.type.includes("INCOME") || t.type.includes("+")) monthly[tM].inc += t.total; else monthly[tM].exp += t.total;
+            }
         });
         document.getElementById('dash-num-inc').innerText = tI.toLocaleString('pt-PT') + " €";
         document.getElementById('dash-num-exp').innerText = tE.toLocaleString('pt-PT') + " €";
@@ -426,7 +562,7 @@
     document.getElementById('btn-export').onclick = () => {
         let csv = "\ufeffDate;Doc No;Entity;Method;Bank;Place;Type;Net;VAT;Total\n";
         state.transactions.forEach(t => csv += `${t.date};${t.docNo || ""};${t.entity};${t.method};${t.bank};${t.place};${t.type};${t.net};${t.vat};${t.total}\n`);
-        const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); link.download = "Financial_Alcance_Report.csv"; link.click();
+        const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); link.download = "Report.csv"; link.click();
     };
 </script>
 </body>
