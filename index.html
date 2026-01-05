@@ -101,7 +101,7 @@
                             </div>
                         </div>
                         <div class="box">
-                            <h4>Recent Activity</h4>
+                            <h4>Recent Activity (By Introduction)</h4>
                             <div class="table-container"><table><thead><tr><th>Date</th><th>Entity</th><th>Bank</th><th>Place</th><th>Type</th><th align="right">Total</th><th>Action</th></tr></thead><tbody id="table-recent"></tbody></table></div>
                         </div>
                     </div>
@@ -154,7 +154,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, setDoc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, setDoc, updateDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyANUsqIFOdBMyOBbzs1AZCpWOygkn27dIw",
@@ -171,7 +171,6 @@
 
     const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     
-    // LISTAS PADRÃO (O SISTEMA IRÁ RECORRER A ESTAS SE A FIREBASE ESTIVER VAZIA)
     const SEED_ENTITIES = ["DPD","MRW","MEO SA","ALVES BANDEIRA","SALARY","INTERMARCHE","NET EMPREGOS","CTT","PAACK","VODAFONE","EDP","ÁGUAS DE COIMBRA","ZURICH SEGUROS","LEROY MERLIN","MODELO","WORTEN","SODICENTRO","PORTAGENS","STAPLES","MAKRO","TOPAZIO RENT","OFFICE RENT","WAREHOUSE RENT","AMAZON","VOIP","PROSEGUR","FIDELIDADE SEGUROS","CULLIGAN","COMMISSION","STUDIO 99","TRIFIDA","KONTABILE","PICAPONTO","ENDESA","CENTROFAX","FUNDACJA FIRMA DLA KASDEGO","BRISA","SWITL","SMARTEC","AMIGO","PARTNER DEVIDENS","SOCIAL SECURITY","FINANCES","LETS CALL","MICROSOFT","SOTECNISOL","SPANISH SIM CARDS","CONTINENTE","AUCHAN","LAWYER","ALDI","AAC","COMPANY VAN","ACCOUNY MANTAINANCE","VIA VERDE","GOOGLE","PASCOAL","WPS","TPLINK","VIDESP","INTERPREV","IKEA","TEAMS","CASA BAIA","BXO VALOR TRANSACO","MANUTAN","ALBERTO CAETANO","RIA SEGUROS","GRUPEME","IBERIA CONSULTANCY LDA","M. MEILAK & ASSOCIATES","COIMPACK","CEPSA","HEALTH PRIME UNLIMITED","PC COMPONENTES","BP","ACTION","RADIO POPULAR","GENERALYS SEGUROS","MVM","CARTUCHO","JYSK","TROVISCAIS","PC DIGA","GRENKE RENTING","UBER","MGM","EUROGRIP","100 METROS","EUPAGO","STAPLES","GALP","PAPIRO LDA","LUSITANIA SEGUROS","NACEX","COMPANY CAR","REFUNDS","SMARTMEDIA","MIXTRONICA","SUPERMESURA","MACOBEGO","BRICOMARCHE","LIDL","IBEROCAR","MEU SUPER","CONTROLAUTO","CLEANING CAR","HIPER EIRAS","REPSOL","NORAUTO","PINGO DOCE","SALTIGLOBO","VAT REFUND","MOVIFLOR","TROPEGAL","VOLL","TRANSFER BETWEEN ACCOUNTS","DISTINTOS DESTINOS","CARDOSO E SOUSA LDA","VIDAXL","TRANSFERENCIA INICIAL","PETROL","CASA YES","MILANNA","PRINK","HOMA","VITALIJUZ JANKUNAS","INDIANO","MULTIMAX","TANMAY NASKAR","ERVINS VANAG","BONUS","ZUMUB","NOTINO","MAKEUP","PEPCO","YULIA YANKUNENE","HONORATA JOZWIK","AIVARS LAKOTKO","ZENUP MARKETING LLC","DAIVA AGLINSKIENE","FLUX LEADS LLC","BONANNO ROSARIO DARIO","VYTAUTAS BIE","ANTANAS KLIMCIAUSKAS","ARTURAS PONOMARIOVAS","RASA UTYRIENE","INESE LEISANE","MINGAILE ARMINAITE","VALENTINA ANTONIUK","CHINES SHOP","RINOADS","TIP","WAN DI","DADDY'S LINE LLC","HERTZ CAR RENTING","QUADROS DELUX","RETURN","CARLOS MARQUES","DAN CAKE","WHITELIST PRO","REMIGIJUS JARMALA","J GOMES","ROMANS SVIRBUTOVICS","FIND PRODUCTS","OTHER","CGD","NOVO BANCO","WELLS","SMART CLIENTS","FNAC","NERINGA ZIDZIUNAITE","INGA BANZINIENE","FZ STARTUP CONSULTANCY LTD","PUSOMA ROZA"];
     const SEED_BANKS = ["NOVO BANCO","MAIN CGD","COD CGD","AGATA CGD","CAPITAL FUND MAIN","WH MAIN CGD","OFF MAIN CGD","TOPA MAIN CGD","CAPITAL FUND OFF","CAPITAL FUND WH","AGATA BPI"];
     const SEED_PLACES = ["OTHER","WAREHOUSE","OFFICE","TOPAZIO","COD","COURIER","POLAND","REFUND","DEW","OFF/WH","CROSSALE","CLIENT","PETROL","NC","COMMISSION","BANK"];
@@ -203,7 +202,6 @@
         }
     });
 
-    // UI INIT
     function initUI() {
         document.getElementById('ipt-date').valueAsDate = new Date();
         ['hist', 'dash'].forEach(p => {
@@ -226,8 +224,18 @@
     }
 
     async function setupSync() {
-        unsubtrans = onSnapshot(query(collection(db, "transactions"), orderBy("date", "desc")), (snap) => {
-            state.transactions = snap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+        // BUSCA TODOS OS DADOS SEM FILTRO PARA NÃO ESCONDER OS ANTIGOS
+        unsubtrans = onSnapshot(collection(db, "transactions"), (snap) => {
+            const rawData = snap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+            
+            // ORDENAÇÃO HÍBRIDA NO CLIENTE (JS)
+            state.transactions = rawData.sort((a, b) => {
+                // Se existe createdAt (timestamp firebase), usa isso. 
+                // Se não (registos antigos), usa a data do calendário como fallback.
+                const timeA = a.createdAt ? a.createdAt.toMillis() : new Date(a.date).getTime();
+                const timeB = b.createdAt ? b.createdAt.toMillis() : new Date(b.date).getTime();
+                return timeB - timeA; // Ordem decrescente
+            });
             render();
         });
 
@@ -299,16 +307,27 @@
         const fB = document.getElementById('hist-f-bank').value;
         const fP = document.getElementById('hist-f-place').value;
 
+        // Versão para Histórico: Ordenado por DATA REAL (Calendário)
+        const historySortedByCalendar = [...state.transactions].sort((a,b) => new Date(b.date) - new Date(a.date));
+
+        // 1. RECENT ACTIVITY: Usa a ordem de introdução que já vem no state.transactions
         state.transactions.forEach((t, idx) => {
             const isInc = (t.type.includes("INCOME") || t.type.includes("+"));
             const val = isInc ? t.total : -t.total;
             if(balances[t.bank] !== undefined) balances[t.bank] += val;
 
+            if(idx < 10) { 
+                rBody.innerHTML += `<tr><td>${t.date}</td><td>${t.entity}</td><td>${t.bank}</td><td>${t.place}</td><td>${t.type}</td><td class="${isInc?'income-text':'expense-text'}" align="right">${t.total.toFixed(2)}€</td><td><button class="btn-del-trans btn" data-id="${t.id}" style="background:#ff7675; padding:2px 5px;">Del</button></td></tr>`;
+            }
+        });
+
+        // 2. HISTORY: Usa a versão ordenada por calendário
+        historySortedByCalendar.forEach((t) => {
+            const isInc = (t.type.includes("INCOME") || t.type.includes("+"));
             const d = new Date(t.date); const tY = d.getFullYear().toString(); const tM = MONTHS[d.getMonth()];
             if((fY==="All" || tY===fY) && (fM==="All" || tM===fM) && (fB==="All" || t.bank===fB) && (fP==="All" || t.place===fP)) {
                 hBody.innerHTML += `<tr><td>${t.date}</td><td>${t.entity}</td><td>${t.method}</td><td>${t.bank}</td><td>${t.place}</td><td>${t.type}</td><td>${(t.net||0).toFixed(2)}</td><td>${(t.vat||0).toFixed(2)}</td><td class="${isInc?'income-text':'expense-text'}">${t.total.toFixed(2)}€</td><td><button class="btn-del-trans btn" data-id="${t.id}" style="background:#ff7675; padding:2px 5px;">Del</button></td></tr>`;
             }
-            if(idx < 5) rBody.innerHTML += `<tr><td>${t.date}</td><td>${t.entity}</td><td>${t.bank}</td><td>${t.place}</td><td>${t.type}</td><td class="${isInc?'income-text':'expense-text'}" align="right">${t.total.toFixed(2)}€</td><td><button class="btn-del-trans btn" data-id="${t.id}" style="background:#ff7675; padding:2px 5px;">Del</button></td></tr>`;
         });
 
         const cardCont = document.getElementById('bank-cards-container');
@@ -334,11 +353,17 @@
         const total = parseFloat(document.getElementById('ipt-total').value);
         const date = document.getElementById('ipt-date').value;
         if(!total || !date) return alert("Select date and value");
+        
         await addDoc(collection(db, "transactions"), {
-            date, entity: document.getElementById('sel-entity').value, method: document.getElementById('sel-method').value,
-            bank: document.getElementById('sel-bank').value, place: document.getElementById('sel-place-entry').value,
-            type: document.getElementById('sel-type').value, net: parseFloat(document.getElementById('ipt-net').value) || 0,
-            vat: parseFloat(document.getElementById('ipt-vat').value) || 0, total
+            date, entity: document.getElementById('sel-entity').value, 
+            method: document.getElementById('sel-method').value,
+            bank: document.getElementById('sel-bank').value, 
+            place: document.getElementById('sel-place-entry').value,
+            type: document.getElementById('sel-type').value, 
+            net: parseFloat(document.getElementById('ipt-net').value) || 0,
+            vat: parseFloat(document.getElementById('ipt-vat').value) || 0, 
+            total,
+            createdAt: serverTimestamp() // GUARDA O MOMENTO DA INTRODUÇÃO
         });
         document.getElementById('ipt-net').value = 0; document.getElementById('ipt-vat').value = 0; document.getElementById('ipt-total').value = 0;
     };
